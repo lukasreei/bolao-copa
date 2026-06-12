@@ -4,6 +4,7 @@ import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { UserPlus } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { isBootstrapAdminEmail } from '../config/admin';
 import { auth, db } from '../lib/firebase';
 
 export function Cadastro() {
@@ -39,7 +40,7 @@ export function Cadastro() {
         name,
         sector,
         email: credential.user.email,
-        role: 'employee',
+        role: isBootstrapAdminEmail(credential.user.email) ? 'admin' : 'employee',
         totalPoints: 0,
         exactScores: 0,
         winnerHits: 0,
