@@ -6,6 +6,7 @@ const links = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/jogos', label: 'Jogos' },
   { to: '/meus-palpites', label: 'Meus Palpites' },
+  { to: '/campeao', label: 'Campeão' },
   { to: '/ranking', label: 'Ranking' },
 ];
 

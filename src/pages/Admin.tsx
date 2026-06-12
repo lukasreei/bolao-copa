@@ -3,6 +3,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   orderBy,
@@ -14,11 +15,12 @@ import {
   writeBatch,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore';
-import { CalendarPlus, Database, Pencil, RotateCcw, Save, Trash2, UploadCloud, X } from 'lucide-react';
+import { CalendarPlus, Crown, Database, Pencil, RotateCcw, Save, Trash2, UploadCloud, X } from 'lucide-react';
 import { FormEvent, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
 import { StatusBadge } from '../components/StatusBadge';
+import { CHAMPION_PREDICTION_POINTS, CHAMPION_TEAMS } from '../config/championPrediction';
 import { worldCup2026Matches } from '../data/worldCup2026Matches';
 import { useAuth } from '../hooks/useAuth';
 import { db } from '../lib/firebase';
@@ -57,6 +59,10 @@ type Prediction = {
   points: number;
 };
 
+type ChampionPrediction = {
+  championTeam: string;
+};
+
 const initialForm: MatchForm = {
   homeTeam: '',
   awayTeam: '',
@@ -75,6 +81,9 @@ export function Admin() {
   const [isLoadingMatches, setIsLoadingMatches] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isImportingMatches, setIsImportingMatches] = useState(false);
+  const [isSavingChampion, setIsSavingChampion] = useState(false);
+  const [officialChampion, setOfficialChampion] = useState('');
+  const [officialChampionInput, setOfficialChampionInput] = useState('');
   const [recalculatingMatchId, setRecalculatingMatchId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -93,6 +102,26 @@ export function Admin() {
       () => {
         setFeedback({ type: 'error', message: 'Não foi possível carregar os jogos.' });
         setIsLoadingMatches(false);
+      },
+    );
+
+    return unsubscribe;
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+
+    const unsubscribe = onSnapshot(
+      doc(db, 'system_settings', 'world_cup_2026'),
+      (snapshot) => {
+        const champion = String(snapshot.data()?.officialChampion ?? '');
+        setOfficialChampion(champion);
+        setOfficialChampionInput(champion);
+      },
+      () => {
+        setFeedback({ type: 'error', message: 'Não foi possível carregar o campeão oficial.' });
       },
     );
 
@@ -355,6 +384,40 @@ export function Admin() {
     }
   }
 
+  async function handleSaveOfficialChampion(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFeedback(null);
+
+    if (!officialChampionInput) {
+      setFeedback({ type: 'error', message: 'Selecione o campeão oficial.' });
+      return;
+    }
+
+    setIsSavingChampion(true);
+
+    try {
+      await setDoc(
+        doc(db, 'system_settings', 'world_cup_2026'),
+        {
+          officialChampion: officialChampionInput,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+
+      await recalculateAllUsersScore(officialChampionInput);
+      setFeedback({ type: 'success', message: 'Campeão oficial salvo e ranking recalculado.' });
+    } catch (caughtError) {
+      if (caughtError instanceof FirebaseError) {
+        setFeedback({ type: 'error', message: getAdminErrorMessage(caughtError.code) });
+      } else {
+        setFeedback({ type: 'error', message: 'Não foi possível salvar o campeão oficial.' });
+      }
+    } finally {
+      setIsSavingChampion(false);
+    }
+  }
+
   async function recalculateMatchScore(match: Match) {
     const predictionsSnapshot = await getDocs(
       query(collection(db, 'predictions'), where('matchId', '==', match.id)),
@@ -389,25 +452,8 @@ export function Admin() {
           query(collection(db, 'predictions'), where('userId', '==', userId)),
         );
         const userPredictions = userPredictionsSnapshot.docs.map(mapPredictionDocument);
-
-        const totals = userPredictions.reduce(
-          (currentTotals, prediction) => {
-            const match = matchMap.get(prediction.matchId);
-
-            if (!match || !isFinishedWithScore(match)) {
-              return currentTotals;
-            }
-
-            const points = calculatePredictionPoints(prediction, match);
-
-            return {
-              totalPoints: currentTotals.totalPoints + points,
-              exactScores: currentTotals.exactScores + (isExactScore(prediction, match) ? 1 : 0),
-              winnerHits: currentTotals.winnerHits + (isWinnerHit(prediction, match) ? 1 : 0),
-            };
-          },
-          { totalPoints: 0, exactScores: 0, winnerHits: 0 },
-        );
+        const championPrediction = await getChampionPrediction(userId);
+        const totals = calculateUserTotals(userPredictions, matchMap, championPrediction, officialChampion);
 
         await setDoc(
           doc(db, 'users', userId),
@@ -419,6 +465,39 @@ export function Admin() {
         );
       }),
     );
+  }
+
+  async function recalculateAllUsersScore(nextOfficialChampion = officialChampion) {
+    const usersSnapshot = await getDocs(collection(db, 'users'));
+    const userIds = usersSnapshot.docs.map((userDocument) => userDocument.id);
+    const matchMap = new Map(matches.map((match) => [match.id, match]));
+
+    await Promise.all(
+      userIds.map(async (userId) => {
+        const userPredictionsSnapshot = await getDocs(
+          query(collection(db, 'predictions'), where('userId', '==', userId)),
+        );
+        const userPredictions = userPredictionsSnapshot.docs.map(mapPredictionDocument);
+        const championPrediction = await getChampionPrediction(userId);
+        const totals = calculateUserTotals(userPredictions, matchMap, championPrediction, nextOfficialChampion);
+
+        await setDoc(
+          doc(db, 'users', userId),
+          {
+            ...totals,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        );
+      }),
+    );
+  }
+
+  async function getChampionPrediction(userId: string): Promise<ChampionPrediction | null> {
+    const championPredictionSnapshot = await getDoc(doc(db, 'champion_predictions', userId));
+    const data = championPredictionSnapshot.data();
+
+    return data ? { championTeam: String(data.championTeam ?? '') } : null;
   }
 
   function resetForm() {
@@ -481,6 +560,43 @@ export function Admin() {
             </button>
           </div>
         </div>
+      </section>
+
+      <section className="panel mb-4 p-5">
+        <div className="mb-5 flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-sofia-gold/25 text-sofia-green">
+            <Crown aria-hidden size={21} />
+          </span>
+          <div>
+            <h2 className="text-lg font-black text-sofia-green">Campeão oficial</h2>
+            <p className="text-sm text-slate-600">
+              Quem acertar recebe {CHAMPION_PREDICTION_POINTS} pontos no ranking.
+            </p>
+          </div>
+        </div>
+
+        <form className="grid gap-3 sm:grid-cols-[1fr_auto]" onSubmit={handleSaveOfficialChampion}>
+          <select
+            className="field"
+            value={officialChampionInput}
+            onChange={(event) => setOfficialChampionInput(event.target.value)}
+            required
+          >
+            <option value="" disabled>
+              Selecione o campeão oficial
+            </option>
+            {CHAMPION_TEAMS.map((team) => (
+              <option key={team} value={team}>
+                {team}
+              </option>
+            ))}
+          </select>
+
+          <button className="primary-button disabled:cursor-not-allowed disabled:opacity-70" disabled={isSavingChampion} type="submit">
+            <Save aria-hidden size={17} />
+            {isSavingChampion ? 'Salvando...' : 'Salvar campeão'}
+          </button>
+        </form>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
@@ -747,6 +863,38 @@ function parseMatchStatus(status: unknown): MatchStatus {
 
 function isFinishedWithScore(match: Pick<Match, 'status' | 'homeScore' | 'awayScore'>) {
   return match.status === 'finished' && match.homeScore !== null && match.awayScore !== null;
+}
+
+function calculateUserTotals(
+  predictions: Prediction[],
+  matchMap: Map<string, Match>,
+  championPrediction: ChampionPrediction | null,
+  officialChampion: string,
+) {
+  const totals = predictions.reduce(
+    (currentTotals, prediction) => {
+      const match = matchMap.get(prediction.matchId);
+
+      if (!match || !isFinishedWithScore(match)) {
+        return currentTotals;
+      }
+
+      const points = calculatePredictionPoints(prediction, match);
+
+      return {
+        totalPoints: currentTotals.totalPoints + points,
+        exactScores: currentTotals.exactScores + (isExactScore(prediction, match) ? 1 : 0),
+        winnerHits: currentTotals.winnerHits + (isWinnerHit(prediction, match) ? 1 : 0),
+      };
+    },
+    { totalPoints: 0, exactScores: 0, winnerHits: 0 },
+  );
+
+  if (officialChampion && championPrediction?.championTeam === officialChampion) {
+    totals.totalPoints += CHAMPION_PREDICTION_POINTS;
+  }
+
+  return totals;
 }
 
 function toDatetimeLocalValue(date: Date) {

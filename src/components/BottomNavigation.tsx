@@ -1,4 +1,4 @@
-import { BarChart3, Home, ListChecks, ShieldCheck, Trophy } from 'lucide-react';
+import { BarChart3, Crown, Home, ListChecks, ShieldCheck, Trophy } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
@@ -6,6 +6,7 @@ const items = [
   { to: '/dashboard', label: 'Início', icon: Home },
   { to: '/jogos', label: 'Jogos', icon: ListChecks },
   { to: '/meus-palpites', label: 'Palpites', icon: ShieldCheck },
+  { to: '/campeao', label: 'Campeão', icon: Crown },
   { to: '/ranking', label: 'Ranking', icon: Trophy },
 ];
 
@@ -15,7 +16,7 @@ export function BottomNavigation() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-sofia-green/10 bg-white/95 px-2 py-2 backdrop-blur md:hidden">
-      <div className={`grid gap-1 ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
+      <div className="flex gap-1 overflow-x-auto">
         {visibleItems.map((item) => {
           const Icon = item.icon;
 
@@ -25,7 +26,7 @@ export function BottomNavigation() {
               to={item.to}
               className={({ isActive }) =>
                 [
-                  'flex h-14 flex-col items-center justify-center gap-1 rounded-md text-[11px] font-semibold transition',
+                  'flex h-14 min-w-16 flex-col items-center justify-center gap-1 rounded-md text-[11px] font-semibold transition',
                   isActive
                     ? 'bg-sofia-green text-white'
                     : 'text-sofia-green hover:bg-sofia-cream',

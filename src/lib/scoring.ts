@@ -20,7 +20,7 @@ export function calculatePredictionPoints(prediction: ScoringPrediction, match: 
   let points = 0;
 
   if (getOutcome(prediction.homeScore, prediction.awayScore) === getOutcome(match.homeScore, match.awayScore)) {
-    points += 5;
+    points += 100;
   }
 
   if (prediction.homeScore === match.homeScore) {
