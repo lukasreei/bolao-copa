@@ -236,13 +236,14 @@ export function Dashboard() {
         </article>
 
         <article className="panel p-5">
-          <h2 className="text-lg font-black text-sofia-green">Top 3 ranking</h2>
-          <div className="mt-4 space-y-3">
-            {ranking.slice(0, 3).map((rankingUser, index) => (
+          <h2 className="text-lg font-black text-sofia-green">Ranking</h2>
+          <div className="mt-4 max-h-[26rem] space-y-3 overflow-y-auto pr-1">
+            {ranking.map((rankingUser, index) => (
               <div key={rankingUser.uid} className="flex items-center gap-3 rounded-lg border border-sofia-green/10 p-3">
                 <span className="flex h-9 w-9 items-center justify-center rounded-md bg-sofia-green text-sm font-black text-white">
-                  {index + 1}
+                  #{index + 1}
                 </span>
+                {index < 3 ? <span className="text-lg">{getRankingMedal(index + 1)}</span> : null}
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-bold text-sofia-green">{rankingUser.name || 'Sem nome'}</p>
                   <p className="text-xs font-semibold text-slate-500">{rankingUser.sector || '-'}</p>
@@ -368,4 +369,20 @@ function formatDateTime(date: Date | null) {
     dateStyle: 'short',
     timeStyle: 'short',
   }).format(date);
+}
+
+function getRankingMedal(position: number) {
+  if (position === 1) {
+    return '🥇';
+  }
+
+  if (position === 2) {
+    return '🥈';
+  }
+
+  if (position === 3) {
+    return '🥉';
+  }
+
+  return '';
 }

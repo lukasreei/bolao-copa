@@ -1,5 +1,4 @@
 import { collection, onSnapshot, type QueryDocumentSnapshot } from 'firebase/firestore';
-import { Medal, Trophy } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../components/PageHeader';
 import { db } from '../lib/firebase';
@@ -88,7 +87,7 @@ export function Ranking() {
           </div>
         ) : null}
 
-        <div className="divide-y divide-sofia-green/10">
+        <div className="max-h-[70vh] divide-y divide-sofia-green/10 overflow-y-auto">
           {sortedUsers.map((user, index) => {
             const position = index + 1;
             const isTopThree = position <= 3;
@@ -108,15 +107,9 @@ export function Ranking() {
                       isTopThree ? 'bg-sofia-green text-white' : 'bg-sofia-gold/25 text-sofia-green',
                     ].join(' ')}
                   >
-                    {position}
+                    #{position}
                   </span>
-                  {isTopThree ? (
-                    position === 1 ? (
-                      <Trophy className="text-sofia-gold" aria-hidden size={20} />
-                    ) : (
-                      <Medal className="text-sofia-gold" aria-hidden size={19} />
-                    )
-                  ) : null}
+                  {isTopThree ? <span className="text-xl" aria-label={`Top ${position}`}>{getRankingMedal(position)}</span> : null}
                 </div>
                 <p className="font-bold text-sofia-green">{user.name || 'Sem nome'}</p>
                 <p className="text-sm font-semibold text-slate-600">{user.sector || '-'}</p>
@@ -130,6 +123,22 @@ export function Ranking() {
       </section>
     </div>
   );
+}
+
+function getRankingMedal(position: number) {
+  if (position === 1) {
+    return '🥇';
+  }
+
+  if (position === 2) {
+    return '🥈';
+  }
+
+  if (position === 3) {
+    return '🥉';
+  }
+
+  return '';
 }
 
 function mapUserDocument(userDocument: QueryDocumentSnapshot): RankingUser {

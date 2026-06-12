@@ -1,5 +1,5 @@
 import { FirebaseError } from 'firebase/app';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { UserPlus } from 'lucide-react';
 import { FormEvent, useState } from 'react';
@@ -15,11 +15,13 @@ export function Cadastro() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
+    setSuccess('');
 
     if (password !== confirmPassword) {
       setError('As senhas não conferem.');
@@ -47,7 +49,9 @@ export function Cadastro() {
         createdAt: serverTimestamp(),
       });
 
-      navigate('/dashboard');
+      await signOut(auth);
+      setSuccess('Conta criada com sucesso. Faça login para continuar.');
+      window.setTimeout(() => navigate('/login'), 1500);
     } catch (caughtError) {
       if (caughtError instanceof FirebaseError) {
         setError(getCadastroErrorMessage(caughtError.code));
@@ -138,6 +142,11 @@ export function Cadastro() {
           {error ? (
             <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 sm:col-span-2">
               {error}
+            </p>
+          ) : null}
+          {success ? (
+            <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 sm:col-span-2">
+              {success}
             </p>
           ) : null}
           <button className="primary-button disabled:cursor-not-allowed disabled:opacity-70 sm:col-span-2" type="submit" disabled={isSubmitting}>
