@@ -36,23 +36,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function subscribeToProfile() {
       const userRef = doc(db, 'users', currentUser.uid);
+      const isBootstrapAdmin = isBootstrapAdminEmail(currentUser.email);
 
-      if (isBootstrapAdminEmail(currentUser.email)) {
-        await setDoc(
-          userRef,
-          {
-            uid: currentUser.uid,
-            name: currentUser.displayName || 'Administrador',
-            sector: 'Administração',
-            email: currentUser.email,
-            role: 'admin',
-            totalPoints: 0,
-            exactScores: 0,
-            winnerHits: 0,
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true },
-        );
+      if (isBootstrapAdmin) {
+        try {
+          await setDoc(
+            userRef,
+            {
+              uid: currentUser.uid,
+              name: currentUser.displayName || 'Administrador',
+              sector: 'Administração',
+              email: currentUser.email,
+              role: 'admin',
+              totalPoints: 0,
+              exactScores: 0,
+              winnerHits: 0,
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true },
+          );
+        } catch (error) {
+          console.error('Erro ao criar/atualizar admin bootstrap:', error);
+        }
       }
 
       if (isCancelled) {
@@ -76,20 +81,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   exactScores: Number(data.exactScores ?? 0),
                   winnerHits: Number(data.winnerHits ?? 0),
                 }
-              : null,
+              : isBootstrapAdmin
+                ? createBootstrapAdminProfile(currentUser)
+                : null,
           );
           setIsLoadingAuth(false);
         },
-        () => {
-          setProfile(null);
+        (error) => {
+          console.error('Erro ao carregar perfil do usuário:', error);
+          setProfile(isBootstrapAdmin ? createBootstrapAdminProfile(currentUser) : null);
           setIsLoadingAuth(false);
         },
       );
     }
 
-    subscribeToProfile().catch(() => {
+    subscribeToProfile().catch((error) => {
+      console.error('Erro ao iniciar assinatura do perfil:', error);
       if (!isCancelled) {
-        setProfile(null);
+        setProfile(
+          isBootstrapAdminEmail(currentUser.email)
+            ? createBootstrapAdminProfile(currentUser)
+            : null,
+        );
         setIsLoadingAuth(false);
       }
     });
@@ -111,4 +124,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+function createBootstrapAdminProfile(user: User): UserProfile {
+  return {
+    uid: user.uid,
+    name: user.displayName || 'Administrador',
+    sector: 'Administração',
+    email: user.email ?? '',
+    role: 'admin',
+    totalPoints: 0,
+    exactScores: 0,
+    winnerHits: 0,
+  };
 }
