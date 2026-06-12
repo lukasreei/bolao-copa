@@ -1,15 +1,18 @@
 import { LogOut, Trophy } from 'lucide-react';
 import { NavLink, Link } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 const links = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/jogos', label: 'Jogos' },
   { to: '/meus-palpites', label: 'Meus Palpites' },
   { to: '/ranking', label: 'Ranking' },
-  { to: '/admin', label: 'Admin' },
 ];
 
 export function TopNavbar() {
+  const { isAdmin } = useAuth();
+  const visibleLinks = isAdmin ? [...links, { to: '/admin', label: 'Admin' }] : links;
+
   return (
     <header className="sticky top-0 z-30 border-b border-sofia-green/10 bg-white/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -28,7 +31,7 @@ export function TopNavbar() {
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
-          {links.map((link) => (
+          {visibleLinks.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}

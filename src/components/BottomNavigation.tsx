@@ -1,19 +1,22 @@
 import { BarChart3, Home, ListChecks, ShieldCheck, Trophy } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 const items = [
   { to: '/dashboard', label: 'Início', icon: Home },
   { to: '/jogos', label: 'Jogos', icon: ListChecks },
   { to: '/meus-palpites', label: 'Palpites', icon: ShieldCheck },
   { to: '/ranking', label: 'Ranking', icon: Trophy },
-  { to: '/admin', label: 'Admin', icon: BarChart3 },
 ];
 
 export function BottomNavigation() {
+  const { isAdmin } = useAuth();
+  const visibleItems = isAdmin ? [...items, { to: '/admin', label: 'Admin', icon: BarChart3 }] : items;
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-sofia-green/10 bg-white/95 px-2 py-2 backdrop-blur md:hidden">
-      <div className="grid grid-cols-5 gap-1">
-        {items.map((item) => {
+      <div className={`grid gap-1 ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
+        {visibleItems.map((item) => {
           const Icon = item.icon;
 
           return (
