@@ -29,58 +29,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const currentUser = user;
+    const isBootstrapAdmin = isBootstrapAdminEmail(currentUser.email);
     let isCancelled = false;
     let unsubscribeProfile: (() => void) | undefined;
+    let hasResolvedProfile = false;
 
     setIsLoadingAuth(true);
 
-    async function subscribeToProfile() {
-      const userRef = doc(db, 'users', currentUser.uid);
-      const isBootstrapAdmin = isBootstrapAdminEmail(currentUser.email);
+    if (isBootstrapAdmin) {
+      console.log('AuthProvider: admin bootstrap detectado, liberando perfil local.');
+      setProfile(createBootstrapAdminProfile(currentUser));
+      setIsLoadingAuth(false);
+    }
 
-      if (isBootstrapAdmin) {
-        try {
-          await setDoc(
-            userRef,
-            {
-              uid: currentUser.uid,
-              name: currentUser.displayName || 'Administrador',
-              sector: 'Administração',
-              email: currentUser.email,
-              role: 'admin',
-              totalPoints: 0,
-              exactScores: 0,
-              winnerHits: 0,
-              updatedAt: serverTimestamp(),
-            },
-            { merge: true },
-          );
-        } catch (error) {
-          console.error('Erro ao criar/atualizar admin bootstrap:', error);
-        }
-      }
-
-      if (isCancelled) {
+    const loadingFallback = window.setTimeout(() => {
+      if (isCancelled || hasResolvedProfile) {
         return;
       }
 
+      console.error('AuthProvider: timeout ao carregar perfil, usando fallback local.');
+      setProfile(isBootstrapAdmin ? createBootstrapAdminProfile(currentUser) : null);
+      setIsLoadingAuth(false);
+    }, 8000);
+
+    const userRef = doc(db, 'users', currentUser.uid);
+
+    try {
       unsubscribeProfile = onSnapshot(
         userRef,
         (snapshot) => {
+          hasResolvedProfile = true;
+          window.clearTimeout(loadingFallback);
+
           const data = snapshot.data();
+          console.log('AuthProvider: snapshot de perfil recebido.', {
+            uid: currentUser.uid,
+            exists: snapshot.exists(),
+            isBootstrapAdmin,
+          });
 
           setProfile(
             data
-              ? {
-                  uid: String(data.uid ?? currentUser.uid),
-                  name: String(data.name ?? ''),
-                  sector: String(data.sector ?? ''),
-                  email: String(data.email ?? currentUser.email ?? ''),
-                  role: data.role === 'admin' ? 'admin' : 'employee',
-                  totalPoints: Number(data.totalPoints ?? 0),
-                  exactScores: Number(data.exactScores ?? 0),
-                  winnerHits: Number(data.winnerHits ?? 0),
-                }
+              ? mapUserProfile(data, currentUser, isBootstrapAdmin)
               : isBootstrapAdmin
                 ? createBootstrapAdminProfile(currentUser)
                 : null,
@@ -88,27 +78,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsLoadingAuth(false);
         },
         (error) => {
-          console.error('Erro ao carregar perfil do usuário:', error);
+          hasResolvedProfile = true;
+          window.clearTimeout(loadingFallback);
+
+          console.error('AuthProvider: erro ao carregar perfil do usuário:', error);
           setProfile(isBootstrapAdmin ? createBootstrapAdminProfile(currentUser) : null);
           setIsLoadingAuth(false);
         },
       );
+    } catch (error) {
+      hasResolvedProfile = true;
+      window.clearTimeout(loadingFallback);
+
+      console.error('AuthProvider: erro ao iniciar assinatura do perfil:', error);
+      setProfile(isBootstrapAdmin ? createBootstrapAdminProfile(currentUser) : null);
+      setIsLoadingAuth(false);
     }
 
-    subscribeToProfile().catch((error) => {
-      console.error('Erro ao iniciar assinatura do perfil:', error);
-      if (!isCancelled) {
-        setProfile(
-          isBootstrapAdminEmail(currentUser.email)
-            ? createBootstrapAdminProfile(currentUser)
-            : null,
+    if (isBootstrapAdmin) {
+      void bootstrapAdminProfile(currentUser, userRef);
+    }
+
+    async function bootstrapAdminProfile(adminUser: User, adminUserRef: ReturnType<typeof doc>) {
+      try {
+        console.log('AuthProvider: tentando criar/atualizar admin bootstrap no Firestore.');
+
+        await setDoc(
+          adminUserRef,
+          {
+            uid: adminUser.uid,
+            name: adminUser.displayName || 'Administrador',
+            sector: 'Administração',
+            email: adminUser.email,
+            role: 'admin',
+            totalPoints: 0,
+            exactScores: 0,
+            winnerHits: 0,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
         );
-        setIsLoadingAuth(false);
+
+        console.log('AuthProvider: admin bootstrap sincronizado no Firestore.');
+      } catch (error) {
+        console.error('AuthProvider: erro ao criar/atualizar admin bootstrap:', error);
       }
-    });
+    }
 
     return () => {
       isCancelled = true;
+      window.clearTimeout(loadingFallback);
       unsubscribeProfile?.();
     };
   }, [user]);
@@ -124,6 +143,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+function mapUserProfile(
+  data: Record<string, unknown>,
+  user: User,
+  forceAdmin: boolean,
+): UserProfile {
+  return {
+    uid: String(data.uid ?? user.uid),
+    name: String(data.name ?? ''),
+    sector: String(data.sector ?? ''),
+    email: String(data.email ?? user.email ?? ''),
+    role: forceAdmin || data.role === 'admin' ? 'admin' : 'employee',
+    totalPoints: Number(data.totalPoints ?? 0),
+    exactScores: Number(data.exactScores ?? 0),
+    winnerHits: Number(data.winnerHits ?? 0),
+  };
 }
 
 function createBootstrapAdminProfile(user: User): UserProfile {
