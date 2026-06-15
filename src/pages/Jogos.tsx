@@ -16,6 +16,7 @@ import { Clock, Save } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
+import { ScoringRules } from '../components/ScoringRules';
 import { StatusBadge } from '../components/StatusBadge';
 import { auth, db } from '../lib/firebase';
 
@@ -205,6 +206,8 @@ export function Jogos() {
         title="Jogos"
         description="Consulte a tabela e registre seu palpite antes do encerramento de cada jogo."
       />
+
+      <ScoringRules />
 
       {!authLoaded || isLoadingMatches ? (
         <div className="panel p-5 text-sm font-semibold text-slate-600">Carregando jogos...</div>

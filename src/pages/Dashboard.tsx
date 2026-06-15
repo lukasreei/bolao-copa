@@ -9,6 +9,7 @@ import { CalendarDays, Medal, Target, Trophy } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
+import { ScoringRules } from '../components/ScoringRules';
 import { StatusBadge } from '../components/StatusBadge';
 import { useAuth } from '../hooks/useAuth';
 import { db } from '../lib/firebase';
@@ -141,6 +142,8 @@ export function Dashboard() {
         title="Dashboard"
         description="Resumo dos jogos, desempenho e próximos palpites do Bolão Copa Mercado Sofia."
       />
+
+      <ScoringRules />
 
       {error ? (
         <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
