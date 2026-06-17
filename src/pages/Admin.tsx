@@ -74,7 +74,7 @@ const initialForm: MatchForm = {
 };
 
 export function Admin() {
-  const { isAdmin, isLoadingAuth } = useAuth();
+  const { user, profile, isAdmin, isLoadingAuth } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [form, setForm] = useState<MatchForm>(initialForm);
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
@@ -487,11 +487,31 @@ export function Admin() {
   }
 
   async function recalculateAllUsersScore(nextOfficialChampion = officialChampion) {
+    const currentUser = user;
     const usersSnapshot = await getDocs(collection(db, 'users'));
-    const userIds = usersSnapshot.docs.map((userDocument) => userDocument.id);
+    const userProfiles = new Map(usersSnapshot.docs.map((userDocument) => [userDocument.id, userDocument.data()]));
     const matchMap = new Map(matches.map((match) => [match.id, match]));
     const predictionsSnapshot = await getDocs(collection(db, 'predictions'));
     const allPredictions = predictionsSnapshot.docs.map(mapPredictionDocument);
+    const championPredictionsSnapshot = await getDocs(collection(db, 'champion_predictions'));
+    const championPredictions = new Map(
+      championPredictionsSnapshot.docs.map((championPredictionDocument) => [
+        championPredictionDocument.id,
+        {
+          championTeam: String(championPredictionDocument.data().championTeam ?? ''),
+        },
+      ]),
+    );
+    const userIds = Array.from(
+      new Set(
+        [
+          ...usersSnapshot.docs.map((userDocument) => userDocument.id),
+          ...allPredictions.map((prediction) => prediction.userId),
+          ...championPredictionsSnapshot.docs.map((championPredictionDocument) => championPredictionDocument.id),
+          user?.uid,
+        ].filter((userId): userId is string => Boolean(userId)),
+      ),
+    );
     const predictionBatch = writeBatch(db);
 
     allPredictions.forEach((prediction) => {
@@ -517,12 +537,19 @@ export function Admin() {
     await Promise.all(
       userIds.map(async (userId) => {
         const userPredictions = allPredictions.filter((prediction) => prediction.userId === userId);
-        const championPrediction = await getChampionPrediction(userId);
+        const championPrediction = championPredictions.get(userId) ?? null;
         const totals = calculateUserTotals(userPredictions, matchMap, championPrediction, nextOfficialChampion);
+        const userProfile = userProfiles.get(userId);
+        const isCurrentAdmin = currentUser?.uid === userId;
 
         await setDoc(
           doc(db, 'users', userId),
           {
+            uid: userId,
+            name: String(userProfile?.name ?? (isCurrentAdmin ? profile?.name || currentUser?.displayName || 'Administrador' : '')),
+            sector: String(userProfile?.sector ?? (isCurrentAdmin ? profile?.sector || 'Administração' : '')),
+            email: String(userProfile?.email ?? (isCurrentAdmin ? currentUser?.email ?? '' : '')),
+            role: userProfile?.role === 'admin' || isCurrentAdmin ? 'admin' : 'employee',
             ...totals,
             updatedAt: serverTimestamp(),
           },
