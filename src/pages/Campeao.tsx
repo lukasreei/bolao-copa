@@ -3,6 +3,7 @@ import { Crown, Save } from 'lucide-react';
 import { FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
+import { ScoringRules } from '../components/ScoringRules';
 import { StatusBadge } from '../components/StatusBadge';
 import {
   CHAMPION_PREDICTION_DEADLINE,
@@ -115,6 +116,8 @@ export function Campeao() {
         title="Campeão"
         description={`Escolha quem será o grande campeão da Copa 2026. Esse palpite vale ${CHAMPION_PREDICTION_POINTS} pontos.`}
       />
+
+      <ScoringRules />
 
       {!isLoadingAuth && !user ? (
         <div className="panel p-5">

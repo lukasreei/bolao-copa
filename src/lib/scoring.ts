@@ -8,30 +8,23 @@ export type ScoringMatch = {
   awayScore: number | null;
 };
 
+export const EXACT_SCORE_POINTS = 150;
+export const OUTCOME_POINTS = 100;
+
 export function calculatePredictionPoints(prediction: ScoringPrediction, match: ScoringMatch) {
   if (match.homeScore === null || match.awayScore === null) {
     return 0;
   }
 
   if (isExactScore(prediction, match)) {
-    return 10;
+    return EXACT_SCORE_POINTS;
   }
-
-  let points = 0;
 
   if (getOutcome(prediction.homeScore, prediction.awayScore) === getOutcome(match.homeScore, match.awayScore)) {
-    points += 100;
+    return OUTCOME_POINTS;
   }
 
-  if (prediction.homeScore === match.homeScore) {
-    points += 2;
-  }
-
-  if (prediction.awayScore === match.awayScore) {
-    points += 2;
-  }
-
-  return points;
+  return 0;
 }
 
 export function isExactScore(prediction: ScoringPrediction, match: ScoringMatch) {

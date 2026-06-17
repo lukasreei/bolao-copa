@@ -81,6 +81,7 @@ export function Admin() {
   const [isLoadingMatches, setIsLoadingMatches] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isImportingMatches, setIsImportingMatches] = useState(false);
+  const [isRecalculatingRanking, setIsRecalculatingRanking] = useState(false);
   const [isSavingChampion, setIsSavingChampion] = useState(false);
   const [officialChampion, setOfficialChampion] = useState('');
   const [officialChampionInput, setOfficialChampionInput] = useState('');
@@ -384,6 +385,24 @@ export function Admin() {
     }
   }
 
+  async function handleRecalculateRanking() {
+    setFeedback(null);
+    setIsRecalculatingRanking(true);
+
+    try {
+      await recalculateAllUsersScore();
+      setFeedback({ type: 'success', message: 'Ranking recalculado com os jogos finalizados.' });
+    } catch (caughtError) {
+      if (caughtError instanceof FirebaseError) {
+        setFeedback({ type: 'error', message: getAdminErrorMessage(caughtError.code) });
+      } else {
+        setFeedback({ type: 'error', message: 'Não foi possível recalcular o ranking.' });
+      }
+    } finally {
+      setIsRecalculatingRanking(false);
+    }
+  }
+
   async function handleSaveOfficialChampion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFeedback(null);
@@ -557,6 +576,15 @@ export function Admin() {
             >
               <RotateCcw aria-hidden size={17} />
               Limpar e importar novamente
+            </button>
+            <button
+              className="secondary-button disabled:cursor-not-allowed disabled:opacity-70"
+              disabled={isRecalculatingRanking}
+              type="button"
+              onClick={handleRecalculateRanking}
+            >
+              <RotateCcw aria-hidden size={17} />
+              {isRecalculatingRanking ? 'Recalculando...' : 'Recalcular ranking'}
             </button>
           </div>
         </div>
