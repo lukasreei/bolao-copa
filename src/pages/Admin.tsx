@@ -391,12 +391,12 @@ export function Admin() {
 
     try {
       await recalculateAllUsersScore();
-      setFeedback({ type: 'success', message: 'Ranking recalculado com os jogos finalizados.' });
+      setFeedback({ type: 'success', message: 'Placar de todos atualizado com os jogos finalizados.' });
     } catch (caughtError) {
       if (caughtError instanceof FirebaseError) {
         setFeedback({ type: 'error', message: getAdminErrorMessage(caughtError.code) });
       } else {
-        setFeedback({ type: 'error', message: 'Não foi possível recalcular o ranking.' });
+        setFeedback({ type: 'error', message: 'Não foi possível atualizar o placar de todos.' });
       }
     } finally {
       setIsRecalculatingRanking(false);
@@ -490,13 +490,33 @@ export function Admin() {
     const usersSnapshot = await getDocs(collection(db, 'users'));
     const userIds = usersSnapshot.docs.map((userDocument) => userDocument.id);
     const matchMap = new Map(matches.map((match) => [match.id, match]));
+    const predictionsSnapshot = await getDocs(collection(db, 'predictions'));
+    const allPredictions = predictionsSnapshot.docs.map(mapPredictionDocument);
+    const predictionBatch = writeBatch(db);
+
+    allPredictions.forEach((prediction) => {
+      const match = matchMap.get(prediction.matchId);
+      const points = match && isFinishedWithScore(match)
+        ? calculatePredictionPoints(prediction, match)
+        : 0;
+
+      predictionBatch.set(
+        doc(db, 'predictions', prediction.id),
+        {
+          points,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+    });
+
+    if (allPredictions.length > 0) {
+      await predictionBatch.commit();
+    }
 
     await Promise.all(
       userIds.map(async (userId) => {
-        const userPredictionsSnapshot = await getDocs(
-          query(collection(db, 'predictions'), where('userId', '==', userId)),
-        );
-        const userPredictions = userPredictionsSnapshot.docs.map(mapPredictionDocument);
+        const userPredictions = allPredictions.filter((prediction) => prediction.userId === userId);
         const championPrediction = await getChampionPrediction(userId);
         const totals = calculateUserTotals(userPredictions, matchMap, championPrediction, nextOfficialChampion);
 
@@ -584,7 +604,7 @@ export function Admin() {
               onClick={handleRecalculateRanking}
             >
               <RotateCcw aria-hidden size={17} />
-              {isRecalculatingRanking ? 'Recalculando...' : 'Recalcular ranking'}
+              {isRecalculatingRanking ? 'Atualizando...' : 'Atualizar placar de todos'}
             </button>
           </div>
         </div>
