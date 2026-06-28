@@ -3,6 +3,7 @@ import { AppLayout } from './components/AppLayout';
 import { Admin } from './pages/Admin';
 import { Cadastro } from './pages/Cadastro';
 import { Campeao } from './pages/Campeao';
+import { Chaveamento } from './pages/Chaveamento';
 import { Dashboard } from './pages/Dashboard';
 import { Jogos } from './pages/Jogos';
 import { Login } from './pages/Login';
@@ -18,6 +19,7 @@ export default function App() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/jogos" element={<Jogos />} />
+        <Route path="/chaveamento" element={<Chaveamento />} />
         <Route path="/meus-palpites" element={<MeusPalpites />} />
         <Route path="/campeao" element={<Campeao />} />
         <Route path="/ranking" element={<Ranking />} />

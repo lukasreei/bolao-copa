@@ -42,4 +42,33 @@ select {
   .secondary-button {
     @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-sofia-green/20 bg-white px-4 py-2 text-sm font-semibold text-sofia-green transition hover:border-sofia-gold hover:bg-sofia-cream;
   }
+
+  .bracket-board {
+    background:
+      linear-gradient(90deg, rgba(15, 107, 61, 0.06) 1px, transparent 1px) 0 0 / 16.66% 100%,
+      #ffffff;
+  }
+
+  .bracket-match {
+    position: relative;
+    min-height: 10.75rem;
+  }
+
+  .bracket-round:not(:last-child) .bracket-match::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: -1rem;
+    width: 1rem;
+    border-top: 2px solid rgba(15, 107, 61, 0.2);
+  }
+
+  .bracket-round:not(:first-child) .bracket-match::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: -1rem;
+    width: 1rem;
+    border-top: 2px solid rgba(15, 107, 61, 0.2);
+  }
 }

@@ -35,22 +35,41 @@ const groupStageMatches = groupLetters.flatMap((group, groupIndex) =>
 );
 
 const roundOf32Pairings = [
-  ['2º Grupo A', '2º Grupo B'],
-  ['1º Grupo E', '3º Grupo A/B/C/D/F'],
-  ['1º Grupo F', '2º Grupo C'],
-  ['1º Grupo C', '3º Grupo F/G/H/I/J'],
-  ['2º Grupo E', '2º Grupo I'],
-  ['1º Grupo A', '3º Grupo C/E/F/H/I'],
-  ['1º Grupo L', '3º Grupo E/H/I/J/K'],
-  ['1º Grupo D', '3º Grupo B/E/F/I/J'],
-  ['1º Grupo G', '3º Grupo A/E/H/I/J'],
-  ['2º Grupo K', '2º Grupo L'],
-  ['1º Grupo H', '3º Grupo A/B/C/G/I'],
-  ['1º Grupo B', '3º Grupo E/F/G/I/J'],
-  ['2º Grupo D', '2º Grupo G'],
-  ['1º Grupo I', '3º Grupo C/D/F/G/H'],
-  ['1º Grupo J', '2º Grupo H'],
-  ['1º Grupo K', '3º Grupo D/E/I/J/L'],
+  ['África do Sul', 'Canadá'],
+  ['Alemanha', 'Paraguai'],
+  ['Países Baixos', 'Marrocos'],
+  ['Brasil', 'Japão'],
+  ['França', 'Suécia'],
+  ['Costa do Marfim', 'Noruega'],
+  ['México', 'Equador'],
+  ['Inglaterra', 'RD Congo'],
+  ['Estados Unidos', 'Bósnia e Herzegovina'],
+  ['Bélgica', 'Senegal'],
+  ['Portugal', 'Croácia'],
+  ['Espanha', 'Áustria'],
+  ['Suíça', 'Argélia'],
+  ['Argentina', 'Cabo Verde'],
+  ['Colômbia', 'Gana'],
+  ['Austrália', 'Egito'],
+] as const;
+
+const roundOf32Schedule = [
+  [6, 28, '15:00'],
+  [6, 29, '16:30'],
+  [6, 29, '13:00'],
+  [6, 29, '21:00'],
+  [6, 30, '17:00'],
+  [6, 30, '13:00'],
+  [6, 30, '21:00'],
+  [7, 1, '12:00'],
+  [7, 1, '20:00'],
+  [7, 1, '16:00'],
+  [7, 2, '19:00'],
+  [7, 2, '15:00'],
+  [7, 2, '23:00'],
+  [7, 3, '14:00'],
+  [7, 3, '18:00'],
+  [7, 3, '21:30'],
 ] as const;
 
 const roundOf32Matches = roundOf32Pairings.map(([homeTeam, awayTeam], index) =>
@@ -58,7 +77,12 @@ const roundOf32Matches = roundOf32Pairings.map(([homeTeam, awayTeam], index) =>
     codeNumber: 73 + index,
     homeTeam,
     awayTeam,
-    startsAt: createStartsAt(2026, 6, 28 + Math.floor(index / 4), slotTimes[index % 4]),
+    startsAt: createStartsAt(
+      2026,
+      roundOf32Schedule[index][0],
+      roundOf32Schedule[index][1],
+      roundOf32Schedule[index][2],
+    ),
     phase: '16 avos de final',
   }),
 );
@@ -66,8 +90,8 @@ const roundOf32Matches = roundOf32Pairings.map(([homeTeam, awayTeam], index) =>
 const roundOf16Matches = Array.from({ length: 8 }, (_, index) =>
   createMatch({
     codeNumber: 89 + index,
-    homeTeam: `Vencedor Jogo ${73 + index * 2}`,
-    awayTeam: `Vencedor Jogo ${74 + index * 2}`,
+    homeTeam: `Vencedor Jogo ${[74, 73, 76, 79, 83, 81, 86, 85][index]}`,
+    awayTeam: `Vencedor Jogo ${[77, 75, 78, 80, 84, 82, 88, 87][index]}`,
     startsAt: createStartsAt(2026, 7, 4 + Math.floor(index / 2), slotTimes[index % 2 === 0 ? 1 : 2]),
     phase: 'Oitavas de final',
   }),
@@ -76,8 +100,8 @@ const roundOf16Matches = Array.from({ length: 8 }, (_, index) =>
 const quarterFinalMatches = Array.from({ length: 4 }, (_, index) =>
   createMatch({
     codeNumber: 97 + index,
-    homeTeam: `Vencedor Jogo ${89 + index * 2}`,
-    awayTeam: `Vencedor Jogo ${90 + index * 2}`,
+    homeTeam: `Vencedor Jogo ${[89, 93, 91, 95][index]}`,
+    awayTeam: `Vencedor Jogo ${[90, 94, 92, 96][index]}`,
     startsAt: createStartsAt(2026, 7, 9 + Math.floor(index / 2), slotTimes[index % 2 === 0 ? 1 : 2]),
     phase: 'Quartas de final',
   }),

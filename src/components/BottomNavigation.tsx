@@ -1,10 +1,11 @@
-import { BarChart3, Crown, Home, ListChecks, ShieldCheck, Trophy } from 'lucide-react';
+import { BarChart3, Crown, GitBranch, Home, ListChecks, ShieldCheck, Trophy } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 const items = [
   { to: '/dashboard', label: 'Início', icon: Home },
   { to: '/jogos', label: 'Jogos', icon: ListChecks },
+  { to: '/chaveamento', label: 'Chaves', icon: GitBranch },
   { to: '/meus-palpites', label: 'Palpites', icon: ShieldCheck },
   { to: '/campeao', label: 'Campeão', icon: Crown },
   { to: '/ranking', label: 'Ranking', icon: Trophy },
